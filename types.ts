@@ -11,7 +11,7 @@ export interface Tile {
 
 export interface Meld {
   id: string;
-  type: 'PUNG' | 'KONG' | 'CHOW';
+  type: 'PUNG' | 'KONG' | 'CHOW' | 'SINGLE' | 'PAIR';
   tiles: Tile[];
 }
 
@@ -20,7 +20,7 @@ export interface PigeonDoc {
   name: string;
   description: string;
   price: number;
-  rarity: 'Common' | 'Uncommon' | 'Rare';
+  rarity: '1星' | '2星' | '3星';
   effectType: 'chips' | 'mult' | 'xMult' | 'special';
   value: number;
 }
