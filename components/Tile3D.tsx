@@ -5,16 +5,10 @@ import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
 import { Tile, Suit } from '../types';
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements extends ThreeElements {}
-  }
-  namespace React {
-    namespace JSX {
-      interface IntrinsicElements extends ThreeElements {}
-    }
-  }
-}
+// Fix: Removed global JSX augmentation. The previous implementation was overriding the 
+// standard React JSX.IntrinsicElements namespace (which contains HTML tags like div, span, etc.)
+// with only Three.js elements. Modern @react-three/fiber projects typically handle these 
+// types via tsconfig.json or dedicated type definitions.
 
 interface Tile3DProps {
   tile: Tile;

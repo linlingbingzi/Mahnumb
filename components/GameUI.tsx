@@ -37,9 +37,9 @@ const MessageBubble: React.FC<{ msg: WorkplaceMessage; animate?: boolean }> = ({
             <p className="text-[14px] leading-relaxed font-medium whitespace-pre-wrap">{msg.content}</p>
             
             {msg.type === 'meld' && msg.details?.tiles && (
-              <div className="mt-4 flex gap-1 p-2 bg-black/5 rounded-xl border border-black/5 overflow-hidden">
+              <div className="mt-4 flex gap-1 p-2 bg-black/5 rounded-xl border border-black/5 overflow-hidden justify-center">
                 {msg.details.tiles.map(t => (
-                  <div key={t.id} className="scale-[0.35] origin-center -mx-4.5 -my-5.5">
+                  <div key={t.id} className="scale-[0.25] origin-center -mx-7 -my-10">
                     <Tile2D tile={t} selected={false} onClick={()=>{}} />
                   </div>
                 ))}
@@ -73,7 +73,7 @@ export const GameUI: React.FC = () => {
     score, turnsLeft, hand, melds, deck, selectedIndices, targetScore, currentYear, currentStage,
     requestIteration, confirmIteration, submitHand, executeDemoMeld, state, startOnboarding, initGame, nextRound, money,
     workplaceMessages, onboardingMessages, canHu, doras, selectTile, sortHand, resetGame, 
-    ownedDocs, shopDocs, buyDoc, pendingOptions
+    ownedDocs, shopDocs, buyDoc, pendingOptions, tenpaiMap
   } = useGameStore();
 
   const chatRef = useRef<HTMLDivElement>(null);
@@ -101,15 +101,25 @@ export const GameUI: React.FC = () => {
     }
   }, [state, visibleOnboardingCount, onboardingMessages]);
 
+  const selectedWaits = useMemo(() => {
+    if (selectedIndices.length !== 1) return null;
+    const tileId = hand[selectedIndices[0]].id;
+    return tenpaiMap[tileId] || null;
+  }, [selectedIndices, hand, tenpaiMap]);
+
+  const colleagueNames = ["隔壁老王", "架构小李", "测试阿强", "前端小美", "运维大叔"];
+  const randomColleague = useMemo(() => colleagueNames[Math.floor(Math.random() * colleagueNames.length)], [selectedWaits]);
+
   if (state === 'MENU') {
     return (
       <div className="absolute inset-0 z-[100] flex items-center justify-center bg-[#f0f2f5] p-4 overflow-hidden">
          <div className="scanline" />
+         <div className="crt-noise" />
         <div className="w-full max-w-[1000px] h-[680px] bg-white rounded-[60px] shadow-2xl flex overflow-hidden border border-gray-200 relative z-10">
           <div className="w-[45%] bg-[#3370ff] p-20 flex flex-col justify-between text-white relative overflow-hidden">
             <div className="absolute -top-20 -left-20 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
             <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl" />
-            <h1 className="text-9xl font-black italic tracking-tighter drop-shadow-2xl">牛麻</h1>
+            <h1 className="text-9xl font-black italic tracking-tighter drop-shadow-2xl glitch-text">牛麻</h1>
             <div className="space-y-4">
               <p className="text-3xl font-black italic leading-tight">打工人的麻将逆袭</p>
               <p className="text-lg opacity-70 font-medium">在 8 年职场长跑中对齐颗粒度，<br/>用鸽子文档赋能业务，实现商业闭环。</p>
@@ -192,6 +202,7 @@ export const GameUI: React.FC = () => {
   return (
     <div className={`fixed inset-0 z-10 flex bg-[#f0f2f5] transition-all duration-700 ${canHu ? 'hu-overlay' : ''}`}>
       <div className="scanline" />
+      <div className="crt-noise" />
 
       {/* Main Board */}
       <div className="flex-1 flex flex-col relative border-r border-gray-200 bg-white shadow-inner">
@@ -217,7 +228,7 @@ export const GameUI: React.FC = () => {
              </div>
              <div className="flex flex-col items-end">
                <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">当前交付价值</span>
-               <span className={`text-4xl font-black tracking-tighter transition-all duration-500 drop-shadow-sm ${score >= targetScore ? 'text-green-500 scale-110' : 'text-[#3370ff]'}`}>{score.toLocaleString()}</span>
+               <span className={`text-4xl font-black tracking-tighter transition-all duration-500 drop-shadow-sm ${score >= targetScore ? 'text-green-500 scale-110 glitch-text' : 'text-[#3370ff]'}`}>{score.toLocaleString()}</span>
              </div>
           </div>
         </div>
@@ -279,9 +290,34 @@ export const GameUI: React.FC = () => {
                <span className="text-[50vw] font-black rotate-[-12deg]">牛</span>
             </div>
 
+            {selectedWaits && (
+              <div className="absolute top-10 flex flex-col items-center animate-in slide-in-from-top duration-400 z-50 max-w-lg">
+                <div className="flex gap-6 items-start">
+                   {/* Avatar for the tip */}
+                   <div className="w-12 h-12 rounded-2xl bg-emerald-500 border-2 border-white shadow-xl flex items-center justify-center text-white font-black shrink-0 text-xl">
+                      {randomColleague[0]}
+                   </div>
+                   <div className="flex flex-col gap-2 items-start">
+                      <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">{randomColleague} (好心同事)</span>
+                      <div className="bg-white px-6 py-5 rounded-[32px] rounded-tl-none shadow-2xl border border-blue-100/50 flex flex-col gap-4 relative overflow-visible">
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
+                        <p className="text-[14px] font-bold text-gray-700 italic leading-snug">哥们，打掉选中的模块，再对齐下面这些颗粒度就能上线了！</p>
+                        <div className="flex gap-4 p-4 bg-emerald-50/40 rounded-[24px] border border-emerald-100/50 overflow-visible justify-center">
+                           {selectedWaits.map((wait, idx) => (
+                             <div key={idx} className="scale-[0.5] origin-center -mx-5 -my-8">
+                                <Tile2D tile={wait} selected={false} onClick={()=>{}} isWait={true} />
+                             </div>
+                           ))}
+                        </div>
+                      </div>
+                   </div>
+                </div>
+              </div>
+            )}
+
             {pendingOptions && (
               <div className="absolute inset-0 z-50 flex items-center justify-center bg-blue-600/10 backdrop-blur-md">
-                <div className="bg-white p-16 rounded-[70px] shadow-2xl border border-gray-200 flex flex-col items-center gap-12 max-w-2xl w-full animate-in zoom-in duration-500 border-t-8 border-t-blue-500">
+                <div className="bg-white p-16 rounded-[70px] shadow-2xl border border-gray-200 flex flex-col items-center gap-12 max-w-3xl w-full animate-in zoom-in duration-500 border-t-8 border-t-blue-500">
                   <h4 className="text-5xl font-black text-[#3370ff] tracking-tighter italic animate-pulse drop-shadow-sm">对齐哪份颗粒度？</h4>
                   <div className="flex gap-12">
                     {pendingOptions.map(t => (
@@ -312,9 +348,9 @@ export const GameUI: React.FC = () => {
         </div>
 
         {/* Bottom Interaction Area */}
-        <div className="bg-white border-t border-gray-200 px-12 py-10 shadow-[0_-20px_50px_rgba(0,0,0,0.05)] z-30">
-           <div className="max-w-6xl mx-auto space-y-10">
-              <div className="flex justify-between items-center border-b border-gray-100 pb-5">
+        <div className="bg-white border-t border-gray-200 px-6 py-10 shadow-[0_-20px_50px_rgba(0,0,0,0.05)] z-30">
+           <div className="max-w-full mx-auto space-y-10">
+              <div className="flex justify-between items-center border-b border-gray-100 pb-5 px-6">
                  <div className="flex gap-16 text-[12px] font-black text-gray-400 uppercase tracking-[0.3em] italic">
                     <span className="flex items-center gap-2">重构机会: <span className={`text-lg ml-2 font-black ${turnsLeft <= 3 ? 'text-red-500 animate-pulse' : 'text-gray-900'}`}>{turnsLeft} / 20</span></span>
                     <span className="flex items-center gap-2">剩余需求: <span className="text-gray-900 text-lg ml-2 font-black">{deck.length}</span></span>
@@ -322,18 +358,33 @@ export const GameUI: React.FC = () => {
                  <button onClick={sortHand} className="px-6 py-2.5 bg-gray-50 rounded-2xl text-gray-500 text-[11px] font-black border border-gray-200 hover:bg-gray-100 hover:text-[#3370ff] transition-all active:translate-y-1 italic">自动理牌</button>
               </div>
 
-              <div className="min-h-[180px] bg-gray-50/50 rounded-[50px] border border-gray-100 p-10 flex items-center justify-center relative overflow-visible">
-                 <div className="flex items-center gap-2 flex-wrap justify-center overflow-visible">
-                    {hand.map((tile, idx) => (
-                      <Tile2D 
-                        key={tile.id} tile={tile} selected={selectedIndices.includes(idx)} 
-                        onClick={() => selectTile(idx)} isHu={canHu}
-                      />
-                    ))}
+              {/* Hand Area - Fixed clipping with padding-top and removed overflow-hidden */}
+              <div className="min-h-[300px] bg-gray-50/50 rounded-[50px] border border-gray-100 relative">
+                 <div className="flex items-center gap-2 flex-nowrap justify-center overflow-x-auto no-scrollbar w-full pt-16 pb-8 px-10">
+                    {hand.map((tile, idx) => {
+                      const isDiscardWaiting = !!tenpaiMap[tile.id];
+                      const isPotentialMeld = selectedIndices.length > 0 && selectedIndices.length < 3 && !selectedIndices.includes(idx) && (
+                        hand[idx].suit === hand[selectedIndices[0]].suit && (
+                           Math.abs(hand[idx].value - hand[selectedIndices[0]].value) <= 2 || 
+                           hand[idx].value === hand[selectedIndices[0]].value
+                        )
+                      );
+
+                      return (
+                        <div key={tile.id} className="shrink-0 transition-all duration-300">
+                          <Tile2D 
+                            tile={tile} selected={selectedIndices.includes(idx)} 
+                            onClick={() => selectTile(idx)} isHu={canHu}
+                            isWait={isDiscardWaiting}
+                            isPotential={isPotentialMeld}
+                          />
+                        </div>
+                      );
+                    })}
                  </div>
               </div>
 
-              <div className="flex gap-8 h-20">
+              <div className="flex gap-8 h-20 px-6">
                  <button 
                    onClick={requestIteration} disabled={selectedIndices.length !== 1 || turnsLeft <= 0}
                    className="flex-1 bg-white border-2 border-[#3370ff] text-[#3370ff] rounded-[30px] font-black text-lg hover:bg-blue-50 transition-all disabled:opacity-20 active:scale-95 shadow-sm italic"

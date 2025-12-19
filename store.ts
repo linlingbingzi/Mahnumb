@@ -89,20 +89,41 @@ const checkMahjongWin = (allTiles: Tile[]): boolean => {
     const key = `${t.suit}-${t.value}`;
     counts[key] = (counts[key] || 0) + 1;
   });
+
+  // 7 Pairs check
+  if (allTiles.length === 14) {
+    const pairs = Object.values(counts).filter(c => c >= 2).length;
+    const fourOfAKind = Object.values(counts).filter(c => c === 4).length;
+    if (pairs + (fourOfAKind * 2) === 7) return true;
+  }
+
   const isComplete = (rem: Record<string, number>, hasPair: boolean): boolean => {
-    const keys = Object.keys(rem).filter(k => rem[k] > 0).sort();
+    const keys = Object.keys(rem).filter(k => rem[k] > 0).sort((a, b) => {
+        const [suitA, valA] = a.split('-');
+        const [suitB, valB] = b.split('-');
+        if (suitA !== suitB) return suitA === 'HONOR' ? 1 : -1;
+        return parseInt(valA) - parseInt(valB);
+    });
+    
     if (keys.length === 0) return true;
+    
     const k = keys[0];
     const [suit, valStr] = k.split('-');
     const val = parseInt(valStr);
+
+    // Try pair
     if (!hasPair && rem[k] >= 2) {
       const next = { ...rem, [k]: rem[k] - 2 };
       if (isComplete(next, true)) return true;
     }
+
+    // Try set (3 of a kind)
     if (rem[k] >= 3) {
       const next = { ...rem, [k]: rem[k] - 3 };
       if (isComplete(next, hasPair)) return true;
     }
+
+    // Try sequence
     if (suit !== 'HONOR') {
       const k2 = `${suit}-${val + 1}`;
       const k3 = `${suit}-${val + 2}`;
@@ -113,12 +134,22 @@ const checkMahjongWin = (allTiles: Tile[]): boolean => {
     }
     return false;
   };
-  if (allTiles.length === 14) {
-    const pairs = Object.values(counts).filter(c => c >= 2).length;
-    const fourOfAKind = Object.values(counts).filter(c => c === 4).length;
-    if (pairs + fourOfAKind === 7) return true;
-  }
+
   return isComplete(counts, false);
+};
+
+// Generates one of each possible Mahjong tile type (34 total)
+const getAllPossibleTileTypes = (): Tile[] => {
+  const types: Tile[] = [];
+  SUITS.forEach(suit => {
+    for (let v = 1; v <= 9; v++) {
+      types.push({ id: `TYPE-${suit}-${v}`, suit, value: v, label: `${v}` });
+    }
+  });
+  HONORS_LABELS.forEach((h, idx) => {
+    types.push({ id: `TYPE-HONOR-${idx}`, suit: 'HONOR', value: idx + 1, label: h });
+  });
+  return types;
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -261,6 +292,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     let newDeck = [...deck];
     let drawTileId = get().lastDrawnId;
 
+    // Standard Mahjong rule: Kong draws a replacement tile (rinshan kaihou)
     if (type === 'KONG' && newDeck.length > 0) {
       const drawnTile = newDeck.shift()!;
       const processedTile = { ...drawnTile, isDora: doras.some(d => d.suit === drawnTile.suit && d.value === drawnTile.value) };
@@ -353,8 +385,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
   checkStatus: () => {
     const { hand, melds } = get();
     const allTiles = [...hand, ...melds.flatMap(m => m.tiles)];
+    
+    // Win check
     const win = checkMahjongWin(allTiles);
-    set({ canHu: win });
+
+    // Tenpai check (Ready hand)
+    // We calculate for each tile in hand: if discarded, what are the waits?
+    const tenpaiMap: Record<string, Tile[]> = {};
+    const possibleTiles = getAllPossibleTileTypes();
+
+    if (allTiles.length === 14) {
+      allTiles.forEach((discardCandidate) => {
+        // Only check tiles in the current hand (not melds)
+        if (!hand.some(t => t.id === discardCandidate.id)) return;
+        
+        const tempHand = allTiles.filter(t => t.id !== discardCandidate.id);
+        const handWaits: Tile[] = [];
+        
+        possibleTiles.forEach(p => {
+          if (checkMahjongWin([...tempHand, p])) {
+            handWaits.push(p);
+          }
+        });
+
+        if (handWaits.length > 0) {
+          tenpaiMap[discardCandidate.id] = handWaits;
+        }
+      });
+    }
+
+    set({ canHu: win, tenpaiMap });
   },
 
   sortHand: () => {
